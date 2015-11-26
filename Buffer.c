@@ -9,6 +9,9 @@ const int SEMAPHORE_COUNT = 5;
 
 const int BufferSize = 9;
 
+const int INIF_A_BUFFER = 3;
+const int INIF_B_BUFFER = 5;
+
 union semun {
 	int val;
 	struct semid_ds *buf;
@@ -61,12 +64,10 @@ int sempahorePost (int semid, int type) {
 }
 
 int lock (int semid) {
-	printf("LOCK\n");
 	return semaphoreWait(semid, MUTEX);
 }
 
 int unlock (int semid) {
-	printf("UNLOCK\n");
 	return sempahorePost(semid, MUTEX);
 }
 
@@ -93,12 +94,12 @@ void firstSharedMemoryAttachment () {
 }
 
 int setElement (const char element[]) {
-
 	// zwieksz semafor pusty (dodaj nowy element)
 	semaphoreWait(semaphore_id, EMPTY_BUFFER);
 
 	// zablokowanie zapisu (mutex)
 	if (lock(semaphore_id) == -1) {return 1;}
+	else { printf("LOCK\n"); }
 
 	shared_memory = (char*) shmat (segment_id, 0, 0);
 
@@ -109,6 +110,7 @@ int setElement (const char element[]) {
 	
 	// odblokowanie zapisu mutex
 	if (unlock(semaphore_id) == -1) {return 1;}
+	else { printf("UNLOCK\n"); }
 
 	sempahorePost(semaphore_id, FULL_BUFFER);
 
@@ -120,8 +122,8 @@ int getElement (const char name[]) {
 	semaphoreWait(semaphore_id, FULL_BUFFER);
 
 	// zablokowanie zapisu (mutex)
-	if (lock(semaphore_id) == -1) {return 1;}
-	
+	if (lock(semaphore_id) == -1) {return -1;}
+	else { printf("LOCK\n"); }
 
 	shared_memory = (char*) shmat (segment_id, 0, 0);
 	
@@ -142,9 +144,32 @@ int getElement (const char name[]) {
 	shmdt(shared_memory);
 
 	// odblokowanie zapisu mutex
-	if (unlock(semaphore_id) == -1) {return 1;}
+	if (unlock(semaphore_id) == -1) {return -1;}
+	else { printf("UNLOCK\n");}
 
 	sempahorePost(semaphore_id, EMPTY_BUFFER);
 
 	return 0;
+}
+
+void getElementInfA (const char name[]) {
+	semaphoreWait(semaphore_id, INF_A);
+
+	getElement(name);
+}
+
+void getElementInfB (const char name[]) {
+	semaphoreWait(semaphore_id, INF_B);
+
+	getElement(name);
+}
+
+void setElementWrapper (const char name[]) {
+	int bufferSize = setElement(name);
+
+	if (bufferSize = INIF_A_BUFFER) {
+		sempahorePost(semaphore_id, INF_A);
+	} else if (bufferSize = INIF_B_BUFFER) {
+		sempahorePost(semaphore_id, INF_B);
+	}
 }
