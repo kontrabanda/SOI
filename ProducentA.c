@@ -10,10 +10,10 @@ int main  () {
 	printf("ProducentA#main: Shared Memory id: %d\n", segment_id);
 	printf("ProducentA#main: Semafor id: %d\n", semaphore_id);
 
-	for(int i = 0; i < 10; ++i) {
+	for(int i = 0; i < 20; ++i) {
 		setElement("A");
 
-		usleep(10000);
+		usleep(10);
 	}
 
 	return 0;

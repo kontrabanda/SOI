@@ -5,21 +5,18 @@
 #include "Buffer.h"
 
 int main  () {
-	segment_id = shmget (segment_key, shared_segment_size, 
-							IPC_EXCL | S_IRUSR | S_IWUSR);
+	segment_id = allocateSharedMemory(0);
 
-	printf("Id segmentu: %d\n", segment_id);
+	semaphore_id = semaphoreAllocation();
 
-	// Attochment (przyłączenie)
-	shared_memory = (char*) shmat (segment_id, (void*) 0x5000000, 0);
-	printf ("shared memory reattached at address %p\n", shared_memory);
-	printf ("%s\n", shared_memory);
+	printf("KonsumentB#main: Shared Memory id: %d\n", segment_id);
+	printf("KonsumentB#main: Semafor id: %d\n", semaphore_id);
 
-	// Detach (odłączenie)
-	shmdt (shared_memory);
+	for (int i = 0; i < 20; ++i) {
+		getElement("B");
+		usleep(25000);
+	}
 
-	// Deallocate (likwidacja)
-	shmctl (segment_id, IPC_RMID, 0);
-
+	printf("KONIEC KonsumentB\n");
 	return 0;
 }
