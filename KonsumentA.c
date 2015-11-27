@@ -9,12 +9,12 @@ int main () {
 
 	semaphore_id = semaphoreAllocation();
 
-	printf("KonsumentA#main: Shared Memory id: %d\n", segment_id);
-	printf("KonsumentA#main: Semafor id: %d\n", semaphore_id);
+/*	printf("KonsumentA#main: Shared Memory id: %d\n", segment_id);
+	printf("KonsumentA#main: Semafor id: %d\n", semaphore_id);*/
 
-	for (int i = 0; i < 20; ++i) {
-		getElement("A");
-		usleep(30000);
+	for (int i = 0; i < 10; ++i) {
+		getElementInfA("A");
+		usleep(10000);
 	}
 
 	printf("KONIEC KonsumentA\n");

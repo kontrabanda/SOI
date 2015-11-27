@@ -28,7 +28,8 @@ enum {
 	FULL_BUFFER,
 	EMPTY_BUFFER,
 	INF_A,
-	INF_B
+	INF_B,
+	MUTEX_ADDITIONAL
 };
 
 extern const key_t SEMAPHORE_ID;
@@ -45,7 +46,12 @@ int sempahorePost (int semid, int type);
 int setElement (const char element[]);
 int getElement (const char name[]);
 
-int lock (int semid);
-int unlock (int semid);
+int lock (int semid, int semType);
+int unlock (int semid, int semType);
+
+void getElementInfA (const char name[]);
+void getElementInfB (const char name[]);
+
+void setElementWrapper (const char name[]);
 
 #endif

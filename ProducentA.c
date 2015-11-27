@@ -7,13 +7,13 @@ int main  () {
 	// alokowanie semafora
 	semaphore_id = semaphoreAllocation();
 
-	printf("ProducentA#main: Shared Memory id: %d\n", segment_id);
-	printf("ProducentA#main: Semafor id: %d\n", semaphore_id);
+	/*printf("ProducentA#main: Shared Memory id: %d\n", segment_id);
+	printf("ProducentA#main: Semafor id: %d\n", semaphore_id);*/
 
-	for(int i = 0; i < 20; ++i) {
-		setElement("A");
+	for(int i = 0; i < 10; ++i) {
+		setElementWrapper("A");
 
-		usleep(10);
+		usleep(1000);
 	}
 
 	return 0;

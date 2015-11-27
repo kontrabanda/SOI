@@ -5,12 +5,12 @@ const key_t segment_key = 1234;
 const int shared_segment_size = 1000;
 
 const key_t SEMAPHORE_ID = 285;
-const int SEMAPHORE_COUNT = 5;
+const int SEMAPHORE_COUNT = 6;
 
 const int BufferSize = 9;
 
-const int INIF_A_BUFFER = 3;
-const int INIF_B_BUFFER = 5;
+const int INIF_A_BUFFER = 5;
+const int INIF_B_BUFFER = 3;
 
 union semun {
 	int val;
@@ -34,8 +34,9 @@ int semaphoreInitialize (int semid) {
 	if(semctl(semid, MUTEX, SETVAL, 1) != -1
 		&& semctl(semid, FULL_BUFFER, SETVAL, 0) != -1
 		&& semctl(semid, EMPTY_BUFFER, SETVAL, BufferSize) != -1
-		&& semctl(semid, INF_A, SETVAL, 1) != -1
-		&& semctl(semid, INF_B, SETVAL, 1) != -1) {
+		&& semctl(semid, INF_A, SETVAL, 0) != -1
+		&& semctl(semid, INF_B, SETVAL, 0) != -1
+		&& semctl(semid, MUTEX_ADDITIONAL, SETVAL, 0) != -1) {
 
 		result = 1;
 	}
@@ -53,6 +54,16 @@ int semaphoreWait (int semid, int type) {
 	return semop (semid, &operations, 1);
 }
 
+int semaphoreDecrement (int semid, int type) {
+	struct sembuf operations = {0, 0, 0};
+
+	operations.sem_num = type;
+	operations.sem_op = -1;
+	operations.sem_flg = IPC_NOWAIT;
+
+	return semop (semid, &operations, 1);
+}
+
 int sempahorePost (int semid, int type) {
 	struct sembuf operations = {0, 0, 0};
 
@@ -63,12 +74,12 @@ int sempahorePost (int semid, int type) {
 	return semop (semid, &operations, 1);
 }
 
-int lock (int semid) {
-	return semaphoreWait(semid, MUTEX);
+int lock (int semid, int semType) {
+	return semaphoreWait(semid, semType);
 }
 
-int unlock (int semid) {
-	return sempahorePost(semid, MUTEX);
+int unlock (int semid, int semType) {
+	return sempahorePost(semid, semType);
 }
 
 int allocateSharedMemory (int checkedFirstTime) {
@@ -94,27 +105,32 @@ void firstSharedMemoryAttachment () {
 }
 
 int setElement (const char element[]) {
+	int result = 0;
+
 	// zwieksz semafor pusty (dodaj nowy element)
 	semaphoreWait(semaphore_id, EMPTY_BUFFER);
 
 	// zablokowanie zapisu (mutex)
-	if (lock(semaphore_id) == -1) {return 1;}
+	if (lock(semaphore_id, MUTEX) == -1) {return 1;}
 	else { printf("LOCK\n"); }
 
 	shared_memory = (char*) shmat (segment_id, 0, 0);
 
 	sprintf (shared_memory + strlen(shared_memory), element);
+
+	result = strlen(shared_memory);
+
 	printf("Producent%s, BUFFER: %s, BUFFER_SIZE: %d\n", element, shared_memory, strlen(shared_memory));
 	shmdt (shared_memory);
 
 	
 	// odblokowanie zapisu mutex
-	if (unlock(semaphore_id) == -1) {return 1;}
+	if (unlock(semaphore_id, MUTEX) == -1) {return 1;}
 	else { printf("UNLOCK\n"); }
 
 	sempahorePost(semaphore_id, FULL_BUFFER);
 
-	return 0;
+	return result;
 }
 
 int getElement (const char name[]) {
@@ -122,7 +138,7 @@ int getElement (const char name[]) {
 	semaphoreWait(semaphore_id, FULL_BUFFER);
 
 	// zablokowanie zapisu (mutex)
-	if (lock(semaphore_id) == -1) {return -1;}
+	if (lock(semaphore_id, MUTEX) == -1) {return -1;}
 	else { printf("LOCK\n"); }
 
 	shared_memory = (char*) shmat (segment_id, 0, 0);
@@ -144,7 +160,7 @@ int getElement (const char name[]) {
 	shmdt(shared_memory);
 
 	// odblokowanie zapisu mutex
-	if (unlock(semaphore_id) == -1) {return -1;}
+	if (unlock(semaphore_id, MUTEX) == -1) {return -1;}
 	else { printf("UNLOCK\n");}
 
 	sempahorePost(semaphore_id, EMPTY_BUFFER);
@@ -153,13 +169,23 @@ int getElement (const char name[]) {
 }
 
 void getElementInfA (const char name[]) {
+	//lock(semaphore_id, MUTEX_ADDITIONAL);
+
 	semaphoreWait(semaphore_id, INF_A);
+	semaphoreDecrement(semaphore_id, INF_B);
+	
+	//unlock(semaphore_id, MUTEX_ADDITIONAL);
 
 	getElement(name);
 }
 
 void getElementInfB (const char name[]) {
+	//lock(semaphore_id, MUTEX_ADDITIONAL);
+
 	semaphoreWait(semaphore_id, INF_B);
+	semaphoreDecrement(semaphore_id, INF_A);
+	
+	//unlock(semaphore_id, MUTEX_ADDITIONAL);
 
 	getElement(name);
 }
@@ -167,9 +193,17 @@ void getElementInfB (const char name[]) {
 void setElementWrapper (const char name[]) {
 	int bufferSize = setElement(name);
 
-	if (bufferSize = INIF_A_BUFFER) {
+	if (bufferSize >= INIF_A_BUFFER) {
+		printf("SET A BUFFER SIZE CASE\n");
 		sempahorePost(semaphore_id, INF_A);
-	} else if (bufferSize = INIF_B_BUFFER) {
+	} else {
+		// semctl(semaphore_id, INF_A, SETVAL, 0);
+	}
+
+	if (bufferSize >= INIF_B_BUFFER) {
+		printf("SET B BUFFER SIZE CASE\n");
 		sempahorePost(semaphore_id, INF_B);
+	} else {
+		// semctl(semaphore_id, INF_B, SETVAL, 0);
 	}
 }
